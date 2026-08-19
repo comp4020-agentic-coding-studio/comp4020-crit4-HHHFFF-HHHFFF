@@ -1,85 +1,73 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+**Five Notes** — fifteen pads tuned to one major pentatonic scale across three
+octaves, synthesised live in the browser with the Web Audio API. Press, hold,
+drag across them, or play the rows from the home row of the keyboard; strike
+velocity comes from where on the pad you hit, and two sliders move the whole
+instrument's brightness and reverb. The idea is that the spec line "there is no
+way to play it wrong" should be a property of the instrument rather than a rule
+it enforces on you: pick five notes with no minor second and no tritone between
+any pair, and a stranger mashing the grid with a whole hand gets a chord.
+
+![The instrument with a three-note chord held down](docs/instrument.png)
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+### Making "no wrong notes" arithmetic instead of etiquette
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+The obvious build is a chromatic keyboard plus something that stops you playing
+badly — a snap-to-scale, a quantiser, some forgiveness layer. I went the other
+way and deleted the wrong notes from the instrument entirely, which meant the
+whole guarantee collapsed into one array of five intervals and could be checked
+directly. `spec/scale.test.ts` walks every pair of the fifteen pads and asserts
+that no two are 1 or 6 semitones apart, so the property is proved over the whole
+grid rather than spot-checked. That test is also what stops a later "let's add a
+seventh" from quietly reintroducing wrong answers
+([`3a4c306`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/commit/3a4c306)).
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
+The same instinct settled the layering. JSDOM has no Web Audio at all — `new
+AudioContext()` throws there — so rather than mock it, the tuning lives in a
+module with no DOM and no audio in it, and the synthesis lives in a module with
+no DOM. What's left for the browser is the part only a browser can answer.
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+### A green suite that could not see the bug
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+The pads were done and every check passed, so the remaining work looked like
+polish. Screenshotting the played state next to the idle one showed the grid
+sitting 25px lower after the first note: the opening prompt swaps to a longer
+line, that line wraps, and everything below it moves — at the exact moment the
+crit's pod has made one sound and is deciding whether to make a second.
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
+Both states were correct. Only the transition was wrong, and every assertion in
+the repo looks at one state at a time, so re-running the suite would never have
+told me. I fixed the CSS
+([`e2c35cf`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/commit/e2c35cf)),
+but the fix isn't the interesting part — the blind spot is. So the correction
+went into the harness: `pnpm check:render` drives the built page in real Chrome
+through the same `window.harness` seam a visitor's gestures reach, and compares
+the layout of every element in `<main>` before and after the first sound, at
+both marked viewports
+([`47a8941`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/commit/47a8941)).
 
-> the prompt, verbatim
+How I knew it was a real sensor and not decoration: I checked the pre-fix files
+back out, rebuilt, and ran it — red at both viewports — then restored HEAD and
+ran it again — green. Getting there cost two false positives, both of which
+taught me more than the original bug and are now written into `CLAUDE.md`:
+`getBoundingClientRect()` includes CSS transforms, and — the one I'd never have
+guessed — a transform also makes an element a *containing block*, so lighting a
+pad re-parents its child span's `offsetParent` and an entirely unchanged layout
+reported a 506px jump. The fix was to sum `offset*` up the `offsetParent` chain
+and drop transformed subtrees from the comparison, rather than to wave it
+through with a pixel tolerance
+([`3a4c306...47a8941`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/compare/3a4c306...47a8941)).
 
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
+## What the checks can't tell you
 
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection. A
-green check is not a substitute for that curation.
-
-Images aren't checked: whether one renders is visible the moment you look. Open
-this file on GitHub and look at it before you ship.
+Whether it sounds good. Whether the envelope is too slow to feel like a strike,
+whether the reverb is a wash, whether a gesture is expressive or just tiring.
+Nothing in `pnpm check` has an opinion on any of it, and the parts I changed by
+ear — release length, the near-octave partial at 2.002 that makes a held chord
+shimmer instead of sitting still, the master compressor so fifteen held pads
+duck rather than clip — left no trace in any test.
