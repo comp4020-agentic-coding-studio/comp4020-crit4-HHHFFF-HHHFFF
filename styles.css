@@ -14,15 +14,24 @@ body {
   margin: 0;
   padding: 1rem 1rem 2rem;
   min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   background: radial-gradient(120% 90% at 50% 0%, #1e1b28 0%, var(--bg) 62%);
   font-family: system-ui, sans-serif;
   line-height: 1.6;
   color: var(--ink);
 }
 
+/* Centred vertically, so the instrument sits where the hands are rather than
+   pinned to the top of a tall screen with nothing under it. */
 main {
+  flex: 1;
+  width: 100%;
   max-width: 44rem;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 a {
@@ -57,6 +66,11 @@ h1 {
   color: var(--ink-dim);
   font-size: 0.98rem;
   transition: color 900ms ease;
+  /* Both lines share one grid cell, so the box is always as tall as the taller
+     of them and the pads never move. The swap happens the instant the player
+     makes their first sound, which is the worst possible moment to shift the
+     thing they are reaching for. */
+  display: grid;
 }
 
 .hint.is-played {
@@ -64,13 +78,17 @@ h1 {
 }
 
 .hint__line {
-  display: block;
+  grid-area: 1 / 1;
+  transition: opacity 700ms ease;
 }
 
-/* `hidden` is only a user-agent rule, so an author `display` beats it and the
-   second line would sit there visible from the start. */
-.hint__line[hidden] {
-  display: none;
+/* `visibility`, not the `hidden` attribute: `hidden` is display:none, which
+   would drop the line out of the grid and collapse the reserved space — the
+   shift this stacking exists to prevent. main.ts pairs it with aria-hidden so
+   the inactive line leaves the accessibility tree too. */
+.hint__line[aria-hidden="true"] {
+  visibility: hidden;
+  opacity: 0;
 }
 
 kbd {
@@ -157,9 +175,15 @@ kbd {
   transition: opacity 300ms ease;
 }
 
-.pad:hover .pad__key,
-.pad.is-lit .pad__key {
+.pad:hover .pad__key {
   opacity: 0.85;
+}
+
+/* Dark on a lit pad — the light key colour above is unreadable once the pad
+   is glowing. */
+.pad.is-lit .pad__key {
+  color: hsl(var(--hue) 65% 18%);
+  opacity: 0.8;
 }
 
 /* --- tone and room ------------------------------------------------------- */

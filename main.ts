@@ -71,8 +71,11 @@ function markPlayed(): void {
   if (hasPlayed) return;
   hasPlayed = true;
   hint?.classList.add("is-played");
+  // aria-hidden rather than `hidden`, so both lines stay in the layout and the
+  // pads don't jump the moment the player touches one — see styles.css.
   for (const line of hint?.querySelectorAll<HTMLElement>(".hint__line") ?? []) {
-    line.hidden = !line.hidden;
+    const off = line.getAttribute("aria-hidden") === "true";
+    line.setAttribute("aria-hidden", off ? "false" : "true");
   }
 }
 
