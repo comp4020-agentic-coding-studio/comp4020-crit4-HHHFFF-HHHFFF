@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm build && vitest run",
+    "check": "pnpm typecheck && pnpm build && vitest run && pnpm check:render",
+    "check:render": "node scripts/check-render.ts",
     "check:evidence": "node scripts/check-evidence.ts",
     "test": "vitest run"
   },

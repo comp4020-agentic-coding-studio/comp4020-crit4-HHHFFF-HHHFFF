@@ -94,6 +94,43 @@ while the element sits there on screen. Any element that sets its own
 .thing[hidden] { display: none; }
 ```
 
+And `hidden` is still the wrong tool whenever the box has to keep its space.
+It is `display: none`, so toggling it collapses the element and everything
+below it moves. To swap one line of text for another in place, stack both in
+one CSS grid cell and hide the inactive one with `visibility` plus
+`aria-hidden`; the container then stays as tall as the taller line and nothing
+reflows.
+
+### A state that is fine and a state that is fine can still hide a bug
+
+Every check in here looked at one state at a time, and the defect lived
+between two: on the first note the opening prompt swapped to a longer line and
+pushed the whole instrument 25px down the page. Both states were correct on
+their own. Only the transition was wrong, and nothing in the suite could see a
+transition at all.
+
+So when a page has states, assert across the change, not just within each one:
+drive the state change through the `window` seam and compare the layout before
+against the layout after. `pnpm check:render` does exactly this and is wired
+into `pnpm check`.
+
+### Measuring layout: sum `offset*`, and skip transformed subtrees
+
+Two traps, both of which produced convincing false positives in
+`scripts/check-render.ts` before the real one showed up:
+
+- `getBoundingClientRect()` includes CSS transforms, so an element that merely
+  animates looks like it moved. `offsetTop`/`offsetLeft`/`offsetWidth`/
+  `offsetHeight` ignore transforms --- use those.
+- But a transform also makes an element a **containing block**, so lighting a
+  transformed element re-parents its descendants' `offsetParent` and every raw
+  `offsetTop` underneath changes meaning mid-measurement. That read as a 506px
+  jump and was nothing at all. Sum `offsetTop`/`offsetLeft` up the
+  `offsetParent` chain to get document coordinates, and drop elements with a
+  transformed ancestor from the comparison --- they are being animated, not
+  laid out. Don't paper over it with a pixel tolerance; a real 2px reflow
+  should still fail.
+
 ## The link-preview card
 
 `public/card.png` (1200x630) is the image a shared link shows; `index.html`'s
@@ -106,6 +143,20 @@ checks it, so look at the deployed head when you add pages.
 
 `pnpm check` runs them (`pnpm check:evidence` is the extra gate before you
 ship); CI runs the same plus links, secrets and the deploy. Read the failure.
+
+`pnpm check:render` is this prototype's own sensor and the last step of
+`check`. It serves `dist/` over http, loads the built page in real Chrome at
+390x844 and 1280x900 --- in iframes, for the clamping reason above --- and
+asserts what only a rendering engine knows: nothing in `<main>` moves when the
+player makes their first sound, no horizontal overflow, the instrument fits
+one phone screen without scrolling, every pad is still a 44px touch target,
+and an `AudioContext` really does construct without throwing. It drives the
+page through `window.harness`, the same seam the visitor's gestures reach.
+
+It **warns and skips** when it can't find Chrome rather than failing, so it is
+a local sensor first; set `CHROME_PATH` if yours isn't in the usual place. If
+you change it, prove it still works by running it against the commit before
+the fix it was written for --- a check that has never been red isn't a check.
 
 `spec/README.md`, `PROCESS.md` and `reflections/README.md` are in this repo and
 say what they are for.
