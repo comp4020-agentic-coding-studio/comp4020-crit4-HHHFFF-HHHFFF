@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>Five Notes — a browser instrument with no wrong notes</title>
     <meta
       name="description"
-      content="Replace this with one sentence saying what this page is. A search result and a link preview both show it."
+      content="Fifteen pads tuned to one pentatonic scale, synthesised live in your browser. Play them with a mouse, a finger or the keyboard — every pad agrees with every other one, so there is no wrong way to play it."
     />
 
     <!--
@@ -23,16 +23,46 @@
   <body>
     <header>
       <nav aria-label="Primary">
-        <a href="./">Home</a>
+        <a href="./">Five Notes</a>
       </nav>
     </header>
+
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
+      <h1>Five Notes</h1>
+
+      <p class="hint" id="hint">
+        <span class="hint__line">
+          Press a pad. Or play the rows with <kbd>A</kbd>–<kbd>G</kbd>,
+          <kbd>Q</kbd>–<kbd>T</kbd>, <kbd>1</kbd>–<kbd>5</kbd>.
+        </span>
+        <span class="hint__line" hidden>
+          Hold several at once, or drag across them. Every pad agrees with every other
+          one — there are no wrong notes in here.
+        </span>
       </p>
+
+      <!-- The pads are built from src/scale.ts so the tuning has one home. -->
+      <div class="grid" id="grid" role="group" aria-label="Pads"></div>
+
+      <noscript>
+        <p class="aside">
+          This instrument makes its sound as you play rather than playing anything back,
+          so it needs JavaScript switched on.
+        </p>
+      </noscript>
+
+      <div class="controls">
+        <p class="control">
+          <label for="tone">Tone</label>
+          <input id="tone" type="range" min="0" max="100" value="55" />
+        </p>
+        <p class="control">
+          <label for="room">Room</label>
+          <input id="room" type="range" min="0" max="100" value="40" />
+        </p>
+      </div>
     </main>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
