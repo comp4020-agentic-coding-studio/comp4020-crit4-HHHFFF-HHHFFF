@@ -74,24 +74,35 @@ animated on every pad at once, cued by nothing but CSS.
 That first version looked wrong the moment I looked at it running, and I'd
 have called it "atmospheric" if the person actually looking hadn't called it
 messy instead: fifteen pads pulsing in place read as noise, not an invitation.
-The fix wasn't the keyframe, which was fine — it was the timing. A shared
-`animation-delay` on a shared `animation-duration` looks staggered for exactly
-one loop and then resynchronises, because an `infinite` animation loops
-back-to-back with no gap re-applied; a fixed delay is just where the first
-lap starts; every lap after that a shared clock. The fix that actually holds
-is one shared long duration for the whole grid plus a *negative* per-pad
-delay, so pad N is permanently N steps ahead of pad 0 rather than N steps
-late once. Getting that wrong first is what made the right answer legible —
-"stagger it" and "durably stagger it forever" look identical for one cycle and
-are not the same fix
+The fix wasn't the keyframe, which was fine — it was the timing: one shared
+long `animation-duration` for the whole grid, and a per-pad `animation-delay`
+so each pad is a fixed number of steps out of phase with the next, forever,
+rather than all fifteen on the same clock
 ([`0d47591`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/commit/0d47591)).
 
-Verification here wasn't a new test — it was rerunning `pnpm check:render`,
-because deleting an idle animation is exactly the transform/containing-block
-trap from the moment above (an untransformed pad's `transform` reverting to
-the literal `"none"` is indistinguishable, to that check, from a real layout
-shift). It stayed green, which is the check proving a *negative*: that the
-same pad it had already caught once could not silently regress a second time.
+I shipped that with a *negative* delay, reasoning that it starts an infinite
+animation already partway through its cycle with no waiting, and moved on. It
+was backwards — a higher-order pad starts *further* along than a lower one, so
+the wave travelled bottom-right to top-left, the opposite of what `--order`
+was meant to mean — and I only know that because it got looked at running and
+called out, not because any check here saw it: `check:render` only ever
+compares two static snapshots, and this repo's own notes say headless Chrome
+barely renders animation progress at all, so a screenshot mid-sweep wasn't a
+tool I could trust for a *direction* question either. What settled it was
+tracing the delay arithmetic by hand until the direction fell out of it: a
+positive delay puts every pad's phase offset in the order `--order` describes,
+and needs `animation-fill-mode: backwards` so a pad waiting its turn shows the
+keyframe's `scale(1)` instead of the bare initial `none` — the same
+present/absent transform flip from the moment above, in a new spot
+([`f4d99b1`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/commit/f4d99b1)).
+
+Verification here wasn't a new test — it was rerunning `pnpm check:render`
+after each attempt, because touching this animation at all is the
+transform/containing-block trap from the moment above (an untransformed pad's
+`transform` reverting to the literal `"none"` is indistinguishable, to that
+check, from a real layout shift). It stayed green both times, which is exactly
+why the direction bug needed a human to catch it: the check was never asking
+that question.
 
 ## What the checks can't tell you
 
