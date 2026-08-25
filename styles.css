@@ -57,50 +57,6 @@ h1 {
   letter-spacing: -0.02em;
 }
 
-/* The opening prompt. It is the only instruction on the page, and it sits
-   directly under the title because the crit opens cold: whoever sits down has
-   to find the first sound without being told. */
-.hint {
-  margin: 0 0 1.25rem;
-  max-width: 34rem;
-  color: var(--ink-dim);
-  font-size: 0.98rem;
-  transition: color 900ms ease;
-  /* Both lines share one grid cell, so the box is always as tall as the taller
-     of them and the pads never move. The swap happens the instant the player
-     makes their first sound, which is the worst possible moment to shift the
-     thing they are reaching for. */
-  display: grid;
-}
-
-.hint.is-played {
-  color: #6f6857;
-}
-
-.hint__line {
-  grid-area: 1 / 1;
-  transition: opacity 700ms ease;
-}
-
-/* `visibility`, not the `hidden` attribute: `hidden` is display:none, which
-   would drop the line out of the grid and collapse the reserved space — the
-   shift this stacking exists to prevent. main.ts pairs it with aria-hidden so
-   the inactive line leaves the accessibility tree too. */
-.hint__line[aria-hidden="true"] {
-  visibility: hidden;
-  opacity: 0;
-}
-
-kbd {
-  padding: 0.05em 0.4em;
-  border: 1px solid var(--edge);
-  border-radius: 0.35em;
-  background: #1c1a24;
-  font: inherit;
-  font-size: 0.85em;
-  color: var(--ink);
-}
-
 /* --- the pads ------------------------------------------------------------ */
 
 .grid {
@@ -162,6 +118,10 @@ kbd {
       hsl(var(--hue) 90% 60% / calc(0.3 + var(--velocity) * 0.5)),
     inset 0 0 20px hsl(var(--hue) 90% 74% / 0.35);
   transform: scale(0.965);
+  /* Silences the idle invite below so the strike scale wins outright — an
+     animation always beats a static value on the same property regardless of
+     specificity, so this has to be an explicit override, not just omission. */
+  animation: none;
   /* Strike is immediate; only the release is slow. */
   transition-duration: 30ms, 30ms, 30ms, 90ms;
 }
@@ -184,6 +144,51 @@ kbd {
 .pad.is-lit .pad__key {
   color: hsl(var(--hue) 65% 18%);
   opacity: 0.8;
+}
+
+/* The opening invitation: one glow travels the grid in reading order — row 1
+   left to right, then row 2 from its own left edge, and so on — rather than
+   all fifteen pads breathing in place together. It only ever touches
+   transform/box-shadow — never a layout property — and .is-lit silences it
+   with an explicit `animation: none` rather than removing the property, so no
+   pad's transform ever flips between "present" and "none": that flip is what
+   moved the grid the last time this instrument grew an opening prompt (see
+   CLAUDE.md) — it re-parents a lit pad's key-cap span from <body> to the pad
+   itself, so an unrelated element's offsetTop is measured against a different
+   ancestor before and after and reads as a jump that never happened. Keeping
+   *some* transform on every pad at all times keeps that ancestor fixed.
+
+   The travel itself is one standard trick: every pad runs the identical
+   keyframes for the identical duration — one full lap of all 15 pads — and
+   only its *delay* differs, as a negative offset of `--order` slots. A
+   negative delay just starts an infinite animation already partway through
+   its cycle, so pad N begins exactly N slots ahead of pad 0 and — because
+   every pad shares one duration — stays exactly that far ahead forever. Equal
+   positive delays would look the same at first but drift into sync within a
+   couple of laps, which is the "all breathing together" mess this replaces:
+   see the reflections/crit-4.md note on states that are fine alone hiding a
+   bug in the transition between them. */
+@keyframes invite {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 hsl(var(--hue) 70% 60% / 0);
+  }
+  3.33% {
+    transform: scale(1.05);
+    box-shadow: 0 0 16px hsl(var(--hue) 70% 60% / 0.4);
+  }
+  10% {
+    transform: scale(1);
+    box-shadow: 0 0 0 hsl(var(--hue) 70% 60% / 0);
+  }
+}
+
+.pad {
+  /* One lap = 15 pads * 260ms a slot. Keep both numbers here in sync with
+     --order's range (main.ts) if the grid ever grows past 3x5. */
+  animation: invite 3900ms ease-in-out infinite;
+  animation-delay: calc(var(--order) * -260ms);
 }
 
 /* --- tone and room ------------------------------------------------------- */
@@ -224,6 +229,7 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .pad,
   .pad.is-lit {
+    animation: none;
     transform: none;
   }
 }

@@ -2,7 +2,7 @@
 // that makes a sound lives in src/synth.ts; everything that decides which
 // sound lives in src/scale.ts. This file only translates gestures into pad ids.
 
-import { PADS, padForKey } from "./src/scale.ts";
+import { COLUMNS, PADS, padForKey } from "./src/scale.ts";
 import { Synth } from "./src/synth.ts";
 
 declare global {
@@ -26,7 +26,6 @@ declare global {
 const synth = new Synth();
 
 const grid = document.querySelector<HTMLElement>("#grid");
-const hint = document.querySelector<HTMLElement>("#hint");
 const tone = document.querySelector<HTMLInputElement>("#tone");
 const room = document.querySelector<HTMLInputElement>("#room");
 
@@ -39,7 +38,7 @@ const rows = [...new Set(PADS.map((pad) => pad.octave))].sort((a, b) => b - a);
 
 const padElements = new Map<number, HTMLButtonElement>();
 
-for (const octave of rows) {
+for (const [rowIndex, octave] of rows.entries()) {
   const row = document.createElement("div");
   row.className = "row";
   for (const pad of PADS.filter((candidate) => candidate.octave === octave)) {
@@ -49,6 +48,10 @@ for (const octave of rows) {
     button.dataset.pad = String(pad.id);
     button.style.setProperty("--column", String(pad.column));
     button.style.setProperty("--octave", String(pad.octave));
+    // Position in the top-left-to-bottom-right raster order, so the idle
+    // invite animation (styles.css) can sweep the grid like a reading order
+    // rather than every pad breathing in place at once.
+    button.style.setProperty("--order", String(rowIndex * COLUMNS + pad.column));
     // The note name is the label a screen reader reads; the key cap is the
     // hint a sighted player reads. Neither is instruction — both are just
     // there when you look.
@@ -63,21 +66,6 @@ for (const octave of rows) {
 // --- lighting and holding ---------------------------------------------------
 
 const litPads = new Set<number>();
-let hasPlayed = false;
-
-/** Swap the opening prompt for the one that draws out the second sound. Only
- *  ever fires once, and only after the player has already made a noise. */
-function markPlayed(): void {
-  if (hasPlayed) return;
-  hasPlayed = true;
-  hint?.classList.add("is-played");
-  // aria-hidden rather than `hidden`, so both lines stay in the layout and the
-  // pads don't jump the moment the player touches one — see styles.css.
-  for (const line of hint?.querySelectorAll<HTMLElement>(".hint__line") ?? []) {
-    const off = line.getAttribute("aria-hidden") === "true";
-    line.setAttribute("aria-hidden", off ? "false" : "true");
-  }
-}
 
 function pressPad(id: number, velocity: number): void {
   synth.press(id, velocity);
@@ -87,7 +75,6 @@ function pressPad(id: number, velocity: number): void {
     element.classList.add("is-lit");
   }
   litPads.add(id);
-  markPlayed();
 }
 
 function releasePad(id: number): void {
