@@ -160,14 +160,21 @@ h1 {
 
    The travel itself is one standard trick: every pad runs the identical
    keyframes for the identical duration — one full lap of all 15 pads — and
-   only its *delay* differs, as a negative offset of `--order` slots. A
-   negative delay just starts an infinite animation already partway through
-   its cycle, so pad N begins exactly N slots ahead of pad 0 and — because
-   every pad shares one duration — stays exactly that far ahead forever. Equal
-   positive delays would look the same at first but drift into sync within a
-   couple of laps, which is the "all breathing together" mess this replaces:
-   see the reflections/crit-4.md note on states that are fine alone hiding a
-   bug in the transition between them. */
+   only its *delay* differs, as a plain positive offset of `--order` slots.
+   Because every pad shares one duration, that per-pad offset is a permanent
+   phase difference, not a one-lap head start that later drifts — pad N is
+   always exactly N slots behind pad 0, forever, which is what keeps this a
+   steady left-to-right/top-to-bottom sweep instead of the "all breathing
+   together" mess it replaces. (A *negative* delay looks tempting for the
+   same job — it starts an infinite animation already partway through its
+   cycle, with no waiting — but it starts the higher-order pads *further*
+   along, so the sweep runs backwards, bottom-right to top-left: the exact
+   direction bug caught here.) `backwards` on the fill mode is what makes a
+   positive delay safe to use at all: without it, a pad waiting for its turn
+   shows no animation yet, so its transform is the bare initial value `none`
+   — the same present/absent flip flagged above — where `backwards` instead
+   holds it at the 0% keyframe's `scale(1)`, a real transform, from the first
+   frame. */
 @keyframes invite {
   0%,
   100% {
@@ -187,8 +194,8 @@ h1 {
 .pad {
   /* One lap = 15 pads * 260ms a slot. Keep both numbers here in sync with
      --order's range (main.ts) if the grid ever grows past 3x5. */
-  animation: invite 3900ms ease-in-out infinite;
-  animation-delay: calc(var(--order) * -260ms);
+  animation: invite 3900ms ease-in-out infinite backwards;
+  animation-delay: calc(var(--order) * 260ms);
 }
 
 /* --- tone and room ------------------------------------------------------- */
