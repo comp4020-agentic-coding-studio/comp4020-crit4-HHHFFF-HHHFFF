@@ -63,6 +63,36 @@ and drop transformed subtrees from the comparison, rather than to wave it
 through with a pixel tolerance
 ([`3a4c306...47a8941`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/compare/3a4c306...47a8941)).
 
+### Discoverability without a word, and a chase that wouldn't stay a chase
+
+The opening screen had a paragraph telling a stranger which keys did what.
+That is the most literal way to fail crit 4's own discoverability line — a
+stranger is meant to find the first sound uninstructed — so I deleted it. But
+a blank grid invites nothing either; the obvious replacement was a slow glow
+animated on every pad at once, cued by nothing but CSS.
+
+That first version looked wrong the moment I looked at it running, and I'd
+have called it "atmospheric" if the person actually looking hadn't called it
+messy instead: fifteen pads pulsing in place read as noise, not an invitation.
+The fix wasn't the keyframe, which was fine — it was the timing. A shared
+`animation-delay` on a shared `animation-duration` looks staggered for exactly
+one loop and then resynchronises, because an `infinite` animation loops
+back-to-back with no gap re-applied; a fixed delay is just where the first
+lap starts; every lap after that a shared clock. The fix that actually holds
+is one shared long duration for the whole grid plus a *negative* per-pad
+delay, so pad N is permanently N steps ahead of pad 0 rather than N steps
+late once. Getting that wrong first is what made the right answer legible —
+"stagger it" and "durably stagger it forever" look identical for one cycle and
+are not the same fix
+([`0d47591`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-HHHFFF-HHHFFF/commit/0d47591)).
+
+Verification here wasn't a new test — it was rerunning `pnpm check:render`,
+because deleting an idle animation is exactly the transform/containing-block
+trap from the moment above (an untransformed pad's `transform` reverting to
+the literal `"none"` is indistinguishable, to that check, from a real layout
+shift). It stayed green, which is the check proving a *negative*: that the
+same pad it had already caught once could not silently regress a second time.
+
 ## What the checks can't tell you
 
 Whether it sounds good. Whether the envelope is too slow to feel like a strike,
